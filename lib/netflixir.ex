@@ -73,6 +73,13 @@ defmodule Netflixir do
     end
   end
 
+  def link_data(hyperlink) do
+    hyperlink
+    |> Enum.map(fn x ->
+      %{ name: Floki.text(x), link: Floki.attribute(x, "href") }
+    end)
+  end
+
   def movie(url) do
     case HTTPoison.get(url) do
     { :ok, %HTTPoison.Response{ status_code: 200, body: body } } ->
@@ -93,7 +100,7 @@ defmodule Netflixir do
       streaming_countries = main_content
       |> Enum.at(1)
       |> Floki.find("a")
-      |> Floki.attribute("href")
+      |> link_data
       data = Map.put(data, :streaming_countries, streaming_countries)
 
       netflix_link = body
@@ -102,29 +109,44 @@ defmodule Netflixir do
       |> Enum.at(0)
       data = Map.put(data, :netflix_link, netflix_link)
 
-      audio = main_content
-      |> Enum.at(2)
+      audio = body
+      |> Floki.find("#grid-single-main > div")
+      |> Enum.at(1)
+      |> Floki.find("p")
+      |> Enum.at(0)
       |> Floki.text
       data = Map.put(data, :audio, audio)
 
-      year = main_content
-      |> Enum.at(3)
+      year = body
+      |> Floki.find("#grid-single-main > div")
+      |> Enum.at(1)
+      |> Floki.find("p")
+      |> Enum.at(1)
       |> Floki.text
       data = Map.put(data, :year, year)
 
-      duration = main_content
-      |> Enum.at(4)
+      duration = body
+      |> Floki.find("#grid-single-main > div")
+      |> Enum.at(1)
+      |> Floki.find("p")
+      |> Enum.at(2)
       |> Floki.text
       data = Map.put(data, :duration, duration)
+
+      rating = body
+      |> Floki.find("#grid-single-rating > div")
+      |> Enum.at(1)
+      |> Floki.find("img")
+      |> Floki.attribute("alt")
+      |> Enum.at(0)
+      data = Map.put(data, :rating, rating)
 
       actors = body
       |> Floki.find("#main")
       |> Floki.find("p")
       |> Enum.at(8)
       |> Floki.find("a")
-      |> Enum.map(fn x -> 
-        %{name: Floki.text(x), link: Floki.attribute(x, "href")}
-      end)
+      |> link_data
       data = Map.put(data, :actors, actors)
 
       directors = body
@@ -132,9 +154,7 @@ defmodule Netflixir do
       |> Floki.find("p")
       |> Enum.at(9)
       |> Floki.find("a")
-      |> Enum.map(fn x -> 
-        %{name: Floki.text(x), link: Floki.attribute(x, "href")}
-      end)
+      |> link_data
       data = Map.put(data, :directors, directors)
 
       genres = body
